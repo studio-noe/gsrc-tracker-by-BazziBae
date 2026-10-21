@@ -7,114 +7,237 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --bg-glass: rgba(15, 23, 42, 0.9);
-            --accent: #f59e0b;
-            --text-main: #f8fafc;
-            --text-sub: #94a3b8;
-            --border: rgba(255, 255, 255, 0.1);
+          /* 야외 낮에 보는 화면이라 밝은 면에 어두운 글씨로 간다. 지도 타일과도 이어진다 */
+          --surface: #FBFAF7;
+          --raised: #FFFFFF;
+          --sunken: #F2EFE9;
+          --ink: #1C1A17;
+          --ink-mute: #6E6862;
+          --ink-faint: #A09890;
+          --line: #E5E0D6;
+          --line-bold: #CFC7B8;
+          /* 10월 단풍 대회라 주황을 축으로 */
+          --maple: #D9480F;
+          --maple-soft: #FCEFE7;
+          --live: #0E7C5A;
+          --live-soft: #E4F2EC;
+          --r-sm: 8px;
+          --r-md: 12px;
+          --r-lg: 20px;
+          --shadow: 0 1px 2px rgba(28,26,23,.06), 0 4px 16px rgba(28,26,23,.08);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body {
+          font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          background: var(--surface); color: var(--ink);
+          height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+          -webkit-font-smoothing: antialiased;
+        }
 
         #splash {
-            position: fixed; inset: 0; background: #000; z-index: 9999;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: opacity 0.6s ease, visibility 0.6s ease;
+          position: fixed; inset: 0; background: var(--surface); z-index: 9999;
+          display: flex; flex-direction: column; justify-content: center; align-items: center;
+          color: var(--ink); transition: opacity .5s ease, visibility .5s ease;
         }
         #splash.hidden { opacity: 0; visibility: hidden; }
-        .splash-logo { width: 200px; margin-bottom: 10px; }
-        .splash-sub { font-size: 10px; letter-spacing: 3px; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
-        .splash-credit { font-size: 11px; color: #64748b; font-family: monospace; }
+        .splash-logo { width: 180px; margin-bottom: 18px; }
+        .splash-sub { font-size: 11px; letter-spacing: .22em; color: var(--maple); font-weight: 800; }
+        .splash-credit { font-size: 11px; color: var(--ink-faint); margin-top: 8px; }
 
+        /* 헤더 한 줄. 원래 두 줄이 세로 111px을 먹어 지도를 좁혔다 */
         header {
-            background: #090d16; padding: 12px 16px; border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+          display: flex; justify-content: space-between; align-items: center; gap: 12px;
+          padding: 10px 16px; background: var(--raised); border-bottom: 1px solid var(--line);
+          color: var(--ink); z-index: 1000;
         }
-        .brand-box { display: flex; align-items: center; gap: 10px; }
-        .header-logo { height: 24px; width: auto; }
-        .brand-title { font-size: 10px; font-weight: 800; letter-spacing: 1px; color: var(--text-sub); border-left: 1.5px solid #334155; padding-left: 8px; line-height: 1.2; }
-        .creator-tag { font-size: 9px; color: var(--accent); font-family: monospace; font-weight: 600; }
-        
-        .status-pill { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+        .brand-box { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .header-logo { height: 20px; width: auto; flex-shrink: 0; }
+        .brand-title {
+          display: flex; align-items: baseline; gap: 8px; min-width: 0;
+          font-size: 15px; font-weight: 800; letter-spacing: -.01em;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .brand-date { font-size: 11px; font-weight: 600; color: var(--ink-faint); flex-shrink: 0; }
 
-        #event-banner {
-            background: linear-gradient(135deg, #1e293b, #0f172a); padding: 10px 16px; border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+        .status-pill {
+          display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+          font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 999px;
+          background: var(--live-soft); color: var(--live);
         }
-        .ev-title { font-size: 14px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px; }
-        .ev-date { font-size: 11px; font-family: monospace; color: var(--accent); background: rgba(245, 158, 11, 0.1); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .status-pill i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 50% { opacity: .25; } }
 
         #map-container { position: relative; flex: 1; width: 100%; min-height: 250px; }
-        #map { width: 100%; height: 100%; z-index: 1; background: #e2e8f0; }
-        
+        #map { width: 100%; height: 100%; z-index: 1; background: #EDE9E1; }
+
         .map-tools { position: absolute; top: 12px; left: 12px; z-index: 500; display: flex; gap: 6px; }
         .tool-btn {
-            background: var(--bg-glass); backdrop-filter: blur(10px); color: #fff; padding: 7px 12px;
-            border-radius: 8px; font-size: 11px; font-weight: 700; border: 1px solid var(--border);
-            cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 4px;
+          background: var(--raised); color: var(--ink); padding: 8px 12px; border-radius: 999px;
+          font-size: 12px; font-weight: 700; border: 1px solid var(--line-bold);
+          cursor: pointer; box-shadow: var(--shadow);
         }
-        .tool-btn.tracking-on { background: #3b82f6; border-color: #60a5fa; }
+        .tool-btn.tracking-on { background: var(--ink); color: var(--raised); border-color: var(--ink); }
 
         #bottom-sheet {
-            height: 48%; background: var(--bg-dark); border-top: 1px solid rgba(255,255,255,0.12);
-            border-top-left-radius: 22px; border-top-right-radius: 22px;
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.7); display: flex; flex-direction: column; z-index: 1000;
+          height: 48%; background: var(--surface); border-top: 1px solid var(--line-bold);
+          border-top-left-radius: var(--r-lg); border-top-right-radius: var(--r-lg);
+          box-shadow: 0 -4px 24px rgba(28,26,23,.1); display: flex; flex-direction: column; z-index: 1000;
         }
-        .sheet-handle-bar { padding: 8px 0 4px; display: flex; justify-content: center; cursor: pointer; }
-        .sheet-handle { width: 38px; height: 4px; background: #475569; border-radius: 4px; }
-        .sheet-controls { padding: 6px 16px 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+        .sheet-handle-bar { padding: 10px 0 6px; display: flex; justify-content: center; cursor: ns-resize; touch-action: none; }
+        .sheet-handle { width: 38px; height: 4px; background: var(--line-bold); border-radius: 4px; transition: background .15s, width .15s; }
+        .sheet-handle-bar:hover .sheet-handle { background: var(--ink-faint); }
+        #bottom-sheet.resizing .sheet-handle { background: var(--maple); width: 52px; }
+        #bottom-sheet.resizing { transition: none; }
+        #bottom-sheet.resizing #runner-list { pointer-events: none; }
+
+        .sheet-controls { padding: 2px 16px 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); }
         .search-box {
-            flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
-            padding: 8px 12px; color: #fff; font-size: 13px; outline: none;
+          flex: 1; background: var(--sunken); border: 1px solid transparent; border-radius: var(--r-sm);
+          padding: 9px 12px; color: var(--ink); font-size: 13px; outline: none; font-family: inherit;
         }
-        .search-box:focus { border-color: var(--accent); }
-        .runner-count { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+        .search-box::placeholder { color: var(--ink-faint); }
+        .search-box:focus { border-color: var(--maple); background: var(--raised); }
+        .runner-count { font-size: 12px; font-weight: 700; color: var(--ink-mute); white-space: nowrap; }
 
-        #runner-list { flex: 1; overflow-y: auto; padding: 10px 16px 24px; display: flex; flex-direction: column; gap: 8px; }
+        #runner-list { flex: 1; overflow-y: auto; padding: 8px 12px 24px; display: flex; flex-direction: column; gap: 4px; }
+
+        /* 카드를 72px에서 56px로 줄였다. 22명 중 4명만 보이던 걸 늘리려고 */
         .runner-card {
-            background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
-            padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.15s;
+          background: var(--raised); border: 1px solid var(--line); border-radius: var(--r-md);
+          padding: 9px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer;
+          transition: border-color .15s, background .15s;
         }
-        .runner-card:active { transform: scale(0.985); background: #334155; }
-        .rc-profile { display: flex; align-items: center; gap: 10px; }
-        .rc-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-        .rc-name { font-size: 15px; font-weight: 800; color: #fff; }
-        .rc-bib { font-size: 11px; font-weight: 600; color: var(--text-sub); background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-        
-        .rc-right { display: flex; align-items: center; gap: 12px; }
-        .rc-status { font-size: 12px; color: #60a5fa; font-weight: 600; text-align: right; }
-        .track-btn {
-            background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #60a5fa;
-            padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;
-        }
-        .track-btn.active { background: #3b82f6; color: #fff; }
+        .runner-card:active { background: var(--sunken); }
+        .runner-card.is-tracking { border-color: var(--ink); }
+        .rc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .rc-profile { display: flex; align-items: baseline; gap: 7px; flex: 1 1 auto; min-width: 76px; }
+        .rc-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rc-bib { font-size: 11px; color: var(--ink-faint); flex-shrink: 0; }
 
+        /* 좁아지면 여기가 먼저 양보한다. 이름이 밀려 사라지는 것보다 낫다 */
+        .rc-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .track-btn { flex-shrink: 0; }
+        .rc-km { flex-shrink: 0; }
+        /* km가 이 화면에서 제일 중요한 숫자라 가장 크게 */
+        .rc-km { font-size: 15px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+        .rc-km small { font-size: 11px; font-weight: 700; color: var(--ink-faint); margin-left: 1px; }
+        .rc-status { font-size: 11px; font-weight: 600; color: var(--ink-faint); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rc-status.waiting { color: var(--ink-faint); }
+        .rc-status.holding { color: var(--maple); }
+        .rc-status.done { color: var(--live); }
+        .track-btn {
+          background: none; border: 1px solid var(--line-bold); color: var(--ink-mute);
+          padding: 5px 9px; border-radius: var(--r-sm); font-size: 11px; font-weight: 700;
+          cursor: pointer; font-family: inherit;
+        }
+        .track-btn.active { background: var(--ink); border-color: var(--ink); color: var(--raised); }
+
+        /* 지도 위 러너 핀 */
         .gsrc-pin { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); z-index: 600; }
         .gsrc-pin-bubble {
-            background: #0f172a; color: #fff; padding: 4px 10px; border-radius: 16px; font-weight: 800;
-            font-size: 11px; border: 2px solid var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-            white-space: nowrap; display: flex; align-items: center; gap: 6px;
+          display: flex; align-items: center; gap: 5px; white-space: nowrap;
+          background: var(--raised); color: var(--ink); padding: 4px 9px; border-radius: 999px;
+          font-size: 12px; font-weight: 700; border: 1.5px solid var(--pin, var(--maple));
+          box-shadow: var(--shadow);
         }
-        .gsrc-pin-tail { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--accent); margin-top: -1px; }
+        /* 추정 구간은 점선. 실제 통과 기록이 아니라는 걸 드러낸다 */
+        .gsrc-pin-bubble.estimating { border-style: dashed; }
+        .pin-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pin, var(--maple)); flex-shrink: 0; }
+        .pin-km { font-weight: 800; color: var(--ink-mute); font-variant-numeric: tabular-nums; }
+        .gsrc-pin-tail { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--pin, var(--maple)); margin-top: -1px; }
 
-        .km-marker { background: #1e293b; color: #e2e8f0; font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 12px; border: 1.5px solid #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.4); white-space: nowrap; z-index: 400; }
-        .km-marker.start { background: #10b981; color: #fff; border-color: #059669; font-weight: 900; }
-        .km-marker.finish { background: #f59e0b; color: #000; border-color: #d97706; font-weight: 900; }
-    </style>
+        /* 같은 지점에 모인 러너. 개인 핀과 같은 말풍선 모양이라 한 가족으로 읽힌다 */
+        .gsrc-cluster {
+          display: flex; align-items: center; gap: 7px; white-space: nowrap; cursor: pointer;
+          background: var(--raised); color: var(--ink); padding: 3px 9px 3px 5px; border-radius: 999px;
+          font-size: 12px; font-weight: 700; border: 1.5px solid var(--line-bold);
+          box-shadow: var(--shadow);
+        }
+        .gsrc-cluster.estimating { border-style: dashed; }
+        /* 참조한 아바타 스택. 사진이 없으니 멤버 색으로 대신한다 */
+        .cl-dots { display: flex; flex-shrink: 0; }
+        .cl-dots i { width: 16px; height: 16px; border-radius: 50%; background: var(--pin); box-shadow: 0 0 0 2px var(--raised); }
+        .cl-dots i + i { margin-left: -6px; }
+        .cl-rest { font-weight: 600; color: var(--ink-mute); }
+        .cl-chev { width: 10px; height: 10px; flex-shrink: 0; color: var(--ink-faint); }
+
+        /* 아주 좁은 화면에선 배번을 접는다. 이름과 km가 먼저다 (배번은 검색용이고 이름으로도 찾는다) */
+        @media (max-width: 379px) {
+          .rc-bib { display: none; }
+        }
+
+        /* 넓은 화면에서는 아래에 깔지 않고 지도 옆에 세운다.
+           가로로 늘어나면 이름과 km 사이가 텅 비어 눈이 멀리 움직여야 한다 */
+        @media (min-width: 768px) {
+          body { display: grid; grid-template-columns: 1fr 380px; grid-template-rows: auto 1fr; }
+          header { grid-column: 1 / -1; }
+          #map-container { grid-column: 1; grid-row: 2; min-height: 0; }
+          #bottom-sheet {
+            grid-column: 2; grid-row: 2;
+            /* 드래그로 박아둔 인라인 높이를 눌러야 해서 important가 필요하다 */
+            height: auto !important; border-radius: 0;
+            border-top: none; border-left: 1px solid var(--line-bold); box-shadow: none;
+          }
+          /* 세로로 나눈 게 아니라 높이 드래그가 의미 없다 */
+          .sheet-handle-bar { display: none; }
+          .sheet-controls { padding-top: 12px; }
+        }
+
+        /* 덩어리를 호버/탭하면 멤버가 칩으로 위에 펼쳐진다 */
+        .cl-panel {
+          position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+          display: none; flex-direction: column; align-items: center; gap: 3px;
+          max-height: 232px; overflow-y: auto; overscroll-behavior: contain;
+          /* margin이 아니라 padding으로 띄운다. 배지와 패널 사이에 빈 틈이 생기면 호버가 끊긴다 */
+          padding-bottom: 9px;
+        }
+        .gsrc-pin.is-open .cl-panel { display: flex; }
+        /* 지도 위쪽에 붙은 덩어리는 패널이 화면 밖으로 넘친다. 그럴 땐 아래로 펼친다 */
+        .gsrc-pin.flip .cl-panel { bottom: auto; top: 100%; padding-bottom: 0; padding-top: 9px; }
+        .gsrc-pin.flip .cl-chip { animation-name: chipInDown; }
+        @keyframes chipInDown {
+          from { opacity: 0; transform: translateY(-9px) scale(.94); }
+          to   { opacity: 1; transform: none; }
+        }
+        @media (hover: hover) { .cluster-pin:hover .cl-panel { display: flex; } }
+
+        .cl-chip {
+          display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;
+          background: var(--raised); color: var(--ink); cursor: pointer;
+          border: 1.5px solid var(--line-bold); border-radius: 999px; padding: 4px 10px 4px 6px;
+          font-family: inherit; font-size: 12px; font-weight: 700; box-shadow: var(--shadow);
+          animation: chipIn .2s cubic-bezier(.2,.8,.3,1) backwards;
+          animation-delay: calc(var(--i) * 26ms);   /* 아래에서부터 차례로 올라온다 */
+        }
+        .cl-chip:hover { border-color: var(--ink); }
+        .cl-chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--pin); flex-shrink: 0; }
+        .cl-chip b { color: var(--ink-mute); font-variant-numeric: tabular-nums; }
+        .cl-chip.estimating { border-style: dashed; }
+        @keyframes chipIn {
+          from { opacity: 0; transform: translateY(9px) scale(.94); }
+          to   { opacity: 1; transform: none; }
+        }
+
+        /* 코스 위 거리 표시 */
+        .km-marker {
+          background: var(--raised); color: var(--ink-mute); font-size: 10px; font-weight: 700;
+          padding: 2px 6px; border-radius: 999px; border: 1px solid var(--line-bold);
+          white-space: nowrap; z-index: 400; box-shadow: 0 1px 2px rgba(28,26,23,.08);
+        }
+        .km-marker.start, .km-marker.finish { background: var(--ink); color: var(--raised); border-color: var(--ink); font-weight: 800; }
+        </style>
 </head>
 <body>
 
     <div id="splash">
         <svg class="splash-logo" viewBox="0 0 340 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M72 28C66 19 56 14 44 14C25 14 10 28 10 46C10 64 25 78 44 78C61 78 74 66 75 50H48" stroke="white" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="43" cy="46" r="8" fill="#F59E0B"/>
-            <path d="M148 20H116C105 20 98 26 98 34C98 42 105 46 116 46H136C147 46 154 52 154 61C154 71 146 77 134 77H100" stroke="white" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="169" cy="19" r="8" fill="#F59E0B"/>
-            <path d="M192 77V18H226C238 18 246 25 246 35C246 45 238 51 226 51H192M222 51L246 77" stroke="white" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M322 25C316 18 306 14 295 14C276 14 262 28 262 46C262 64 276 78 295 78C306 78 316 74 322 67" stroke="white" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M72 28C66 19 56 14 44 14C25 14 10 28 10 46C10 64 25 78 44 78C61 78 74 66 75 50H48" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="43" cy="46" r="8" fill="var(--maple)"/>
+            <path d="M148 20H116C105 20 98 26 98 34C98 42 105 46 116 46H136C147 46 154 52 154 61C154 71 146 77 134 77H100" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="169" cy="19" r="8" fill="var(--maple)"/>
+            <path d="M192 77V18H226C238 18 246 25 246 35C246 45 238 51 226 51H192M222 51L246 77" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M322 25C316 18 306 14 295 14C276 14 262 28 262 46C262 64 276 78 295 78C306 78 316 74 322 67" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <div class="splash-sub">MARATHON TRACKER FOR GSRC</div>
         <div class="splash-credit">made by Baebazzi</div>
@@ -123,37 +246,32 @@
     <header>
         <div class="brand-box">
             <svg class="header-logo" viewBox="0 0 340 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M72 28C66 19 56 14 44 14C25 14 10 28 10 46C10 64 25 78 44 78C61 78 74 66 75 50H48" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="43" cy="46" r="9" fill="#F59E0B"/>
-                <path d="M148 20H116C105 20 98 26 98 34C98 42 105 46 116 46H136C147 46 154 52 154 61C154 71 146 77 134 77H100" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="169" cy="19" r="9" fill="#F59E0B"/>
-                <path d="M192 77V18H226C238 18 246 25 246 35C246 45 238 51 226 51H192M222 51L246 77" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M322 25C316 18 306 14 295 14C276 14 262 28 262 46C262 64 276 78 295 78C306 78 316 74 322 67" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M72 28C66 19 56 14 44 14C25 14 10 28 10 46C10 64 25 78 44 78C61 78 74 66 75 50H48" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="43" cy="46" r="9" fill="var(--maple)"/>
+                <path d="M148 20H116C105 20 98 26 98 34C98 42 105 46 116 46H136C147 46 154 52 154 61C154 71 146 77 134 77H100" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="169" cy="19" r="9" fill="var(--maple)"/>
+                <path d="M192 77V18H226C238 18 246 25 246 35C246 45 238 51 226 51H192M222 51L246 77" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M322 25C316 18 306 14 295 14C276 14 262 28 262 46C262 64 276 78 295 78C306 78 316 74 322 67" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <div class="brand-title">MARATHON TRACKER<br><span class="creator-tag">made by Baebazzi</span></div>
+            <div class="brand-title">2026 춘천마라톤 풀코스<span class="brand-date">10.25 일</span></div>
         </div>
-        <div class="status-pill">⚡ 실시간 자동 연동 중</div>
+        <div class="status-pill"><i></i>실시간</div>
     </header>
-
-    <div id="event-banner">
-        <div class="ev-title">🍁 2026 춘천마라톤 풀코스</div>
-        <div class="ev-date">2026.10.25 (일)</div>
-    </div>
 
     <div id="map-container">
         <div class="map-tools">
-            <div class="tool-btn" onclick="fitCourseBounds()">🎯 코스 전체보기</div>
-            <div class="tool-btn" id="tracking-mode-btn" onclick="toggleFreeRoam()">📍 자유 보기</div>
+            <div class="tool-btn" onclick="fitCourseBounds()">코스 전체</div>
+            <div class="tool-btn" id="tracking-mode-btn" onclick="toggleFreeRoam()">자유 보기</div>
         </div>
         <div id="map"></div>
     </div>
 
     <div id="bottom-sheet">
-        <div class="sheet-handle-bar">
+        <div class="sheet-handle-bar" id="sheet-handle-bar" title="드래그해서 높이 조절">
             <div class="sheet-handle"></div>
         </div>
         <div class="sheet-controls">
-            <input type="text" id="search-input" class="search-box" placeholder="🔍 크루원 이름 또는 배번 검색..." oninput="filterAndRenderUI()">
+            <input type="text" id="search-input" class="search-box" placeholder="이름이나 배번 검색" oninput="filterAndRenderUI()">
             <span class="runner-count" id="runner-count-label">총 22명 출전</span>
         </div>
         <div id="runner-list"></div>
@@ -227,12 +345,18 @@
             [37.8760662, 127.7116958], [37.8751053, 127.7122883]
         ];
 
-        const COLORS = ["#f59e0b", "#3b82f6", "#10b981", "#ec4899", "#8b5cf6", "#06b6d4", "#f97316", "#14b8a6", "#eab308", "#6366f1"];
+        // 22명에 10색을 돌려써서 모든 색이 2~3명씩 겹쳤다. 황금각으로 돌려 인접한 사람끼리
+        // 최대한 멀어지게 한다. 다만 22색은 눈으로 구분 가능한 한계를 넘으므로
+        // 색은 어디까지나 보조 단서이고, 사람을 가리는 건 이름이다.
+        const COLORS = Array.from({ length: 24 }, (_, i) =>
+            `hsl(${((i * 137.508) % 360).toFixed(1)} 62% ${i % 2 ? 38 : 47}%)`);
+        const CHECKPOINTS = [0, 5, 10, 15, 20, 21.0975, 25, 30, 35, 40, 42.195]; // 기록 측정 지점
         
         let coursePoints = [];
         let courseLine = null;
         let kmMarkers = [];
-        let runnerMarkers = {};
+        let markerGroups = [];   // [{ members:[runner], marker }]
+        let visibleRunners = [];
         let trackingBib = null;
         let globalRunnersData = [];
 
@@ -262,10 +386,10 @@
             if (trackingBib) {
                 const runner = globalRunnersData.find(r => r.bib === trackingBib);
                 btn.className = "tool-btn tracking-on";
-                btn.innerText = `🔒 ${runner ? runner.name : '트래킹'} 고정중`;
+                btn.innerText = `${runner ? runner.name : '선수'} 따라가는 중`;
             } else {
                 btn.className = "tool-btn";
-                btn.innerText = "📍 자유 보기";
+                btn.innerText = "자유 보기";
             }
         }
 
@@ -322,19 +446,20 @@
             kmMarkers = [];
 
             const latlngs = coursePoints.map(p => [p.lat, p.lon]);
-            courseLine = L.polyline(latlngs, { color: '#ec4899', weight: 5.5, opacity: 0.9 }).addTo(map);
+            courseLine = L.polyline(latlngs, { color: '#D9480F', weight: 4, opacity: 0.85 }).addTo(map);
             fitCourseBounds();
 
-            [0, 5, 10, 15, 20, 21.0975, 25, 30, 35, 40, 42.195].forEach(km => {
+            CHECKPOINTS.forEach(km => {
                 const pt = getCoordAtKm(km);
                 let className = 'km-marker';
                 let text = `${km}K`;
-                if (km === 0) { className += ' start'; text = '🏁 START'; }
-                else if (km === 42.195) { className += ' finish'; text = '🏆 FINISH'; }
-                else if (km === 21.0975) { text = '⚡ HALF'; }
+                if (km === 0) { className += ' start'; text = 'START'; }
+                else if (km === 42.195) { className += ' finish'; text = 'FINISH'; }
+                else if (km === 21.0975) { text = 'HALF'; }
 
                 const m = L.marker([pt.lat, pt.lon], {
-                    icon: L.divIcon({ className: '', html: `<div class="${className}">${text}</div>`, iconSize: [52, 22], iconAnchor: [26, 11] })
+                    icon: L.divIcon({ className: '', html: `<div class="${className}">${text}</div>`, iconSize: [52, 22], iconAnchor: [26, 11] }),
+                    zIndexOffset: -1000   // 러너 마커가 항상 위로 오게
                 }).addTo(map);
                 kmMarkers.push(m);
             });
@@ -342,6 +467,36 @@
 
         function fitCourseBounds() {
             if (courseLine) map.fitBounds(courseLine.getBounds(), { padding: [30, 30] });
+        }
+
+        // ── 측정 지점 사이를 평균 페이스로 메운다 (추측 항법)
+        // 기록은 5km마다 한 번뿐이라 그대로 찍으면 마커가 20분 멈췄다 툭 점프한다.
+        const CLAMP_MARGIN = 0.05; // 다음 지점 50m 앞에서 멈춘다. 통과하지 않은 지점을 통과한 것처럼 보이면 안 된다
+
+        function nextCheckpoint(km) {
+            return CHECKPOINTS.find(c => c > km + 1e-9) ?? 42.195;
+        }
+
+        function estimateKm(r) {
+            const km = Number(r.km) || 0;
+            // 미출발, 완주, 페이스 미확보면 추정하지 않는다
+            if (!r.at || !r.pace || km <= 0 || km >= 42.195) return km;
+
+            const since = (Date.now() - new Date(r.at).getTime()) / 1000;
+            if (!(since > 0)) return km;
+
+            const ceiling = Math.max(km, nextCheckpoint(km) - CLAMP_MARGIN);
+            return Math.min(ceiling, km + since / r.pace);
+        }
+
+        function statusText(r, est) {
+            const km = Number(r.km) || 0;
+            if (km >= 42.195) return { tone: 'done', label: '완주' };
+            if (km <= 0) return { tone: 'waiting', label: '출발 대기' };
+            // 다음 지점 코앞에서 멈췄다 = 페이스가 떨어졌거나 기록이 아직 안 들어온 것
+            if (est >= nextCheckpoint(km) - CLAMP_MARGIN - 1e-9)
+                return { tone: 'holding', label: `${km.toFixed(0)}k 확인 중` };
+            return { tone: 'running', label: est > km + 1e-9 ? '추정' : '기록' };
         }
 
         // 우리 저장소에 갱신되는 data.json을 실시간 로드
@@ -352,11 +507,13 @@
                 const data = await res.json();
                 
                 globalRunnersData = data.map((r, i) => {
-                    const pt = getCoordAtKm(r.km);
+                    const est = estimateKm(r);
+                    const pt = getCoordAtKm(est);
                     return {
                         ...r,
                         color: COLORS[i % COLORS.length],
-                        status: r.km >= 42.195 ? "🎉 완주 완료" : (r.km > 0 ? `주행중 (${r.km.toFixed(1)}k)` : "출발 대기 ⏳"),
+                        estKm: est,
+                        status: statusText(r, est),
                         lat: pt.lat,
                         lon: pt.lon
                     };
@@ -367,65 +524,233 @@
             }
         }
 
-        function filterAndRenderUI() {
-            const query = document.getElementById('search-input').value.trim().toLowerCase();
+        // ── 지도 마커 ─────────────────────────────────────────────
+        // 라벨이 가로로 길고 세로로 납작해서 반지름 하나로 재면 안 맞는다.
+        // 가로/세로를 따로 보고 사각형이 겹치는지로 판단한다. 값은 라벨 실측 크기 + 여유
+        const PIN_W = 140, PIN_H = 38;
+        const tooClose = (a, b) => Math.abs(a.x - b.x) < PIN_W && Math.abs(a.y - b.y) < PIN_H;
+
+        function centroidPt(members) {
+            const pts = members.map(r => map.latLngToLayerPoint([r.lat, r.lon]));
+            return L.point(pts.reduce((a, p) => a + p.x, 0) / pts.length,
+                           pts.reduce((a, p) => a + p.y, 0) / pts.length);
+        }
+
+        // 러너가 5km 지점마다 뭉치는 게 이 앱의 정상 상태라, 안 묶으면 라벨이 늘 포개진다.
+        // 묶고 나면 표시 위치가 중심점으로 옮겨가 다른 덩어리와 다시 가까워질 수 있다.
+        // 그래서 더 합칠 게 없을 때까지 반복한다.
+        // ponytail: 최악 O(n³)이지만 22명이면 즉시 끝난다. 수백 명이면 그리드 버킷으로 바꿀 것
+        function clusterByScreen(list) {
+            const groups = list.map(r => ({ pt: map.latLngToLayerPoint([r.lat, r.lon]), members: [r] }));
+
+            for (let merged = true; merged; ) {
+                merged = false;
+                search:
+                for (let i = 0; i < groups.length; i++) {
+                    for (let j = i + 1; j < groups.length; j++) {
+                        if (!tooClose(groups[i].pt, groups[j].pt)) continue;
+                        groups[i].members.push(...groups[j].members);
+                        groups[i].pt = centroidPt(groups[i].members);
+                        groups.splice(j, 1);
+                        merged = true;
+                        break search;
+                    }
+                }
+            }
+            return groups;
+        }
+
+        function groupLatLng(g) {
+            const n = g.members.length;
+            return [g.members.reduce((a, r) => a + r.lat, 0) / n,
+                    g.members.reduce((a, r) => a + r.lon, 0) / n];
+        }
+
+        const CHEVRON = '<svg class="cl-chev" viewBox="0 0 10 10" fill="none" aria-hidden="true">'
+            + '<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+        function clusterHtml(members) {
+            // 대표는 제일 앞선 사람. 덩어리를 봐도 선두가 누군지는 알 수 있어야 한다
+            const sorted = [...members].sort((a, b) => b.estKm - a.estKm);
+            const lead = sorted[0];
+            const dots = sorted.slice(0, 3)
+                .map(r => `<i style="--pin:${r.color};"></i>`).join('');
+            // 하나라도 추정 구간이면 점선. 전원이 확정 기록은 아니라는 뜻
+            const estimating = members.some(r => r.estKm > r.km + 1e-9);
+            return `<div class="gsrc-pin cluster-pin">
+                <div class="cl-panel"></div>
+                <div class="gsrc-cluster${estimating ? ' estimating' : ''}">
+                    <span class="cl-dots">${dots}</span>
+                    <span>${lead.name} <span class="cl-rest">외 ${members.length - 1}명</span></span>
+                    ${CHEVRON}
+                </div>
+                <div class="gsrc-pin-tail" style="--pin:${lead.color};"></div>
+            </div>`;
+        }
+
+        function pinHtml(r) {
+            const estimating = r.estKm > r.km + 1e-9;
+            return `<div class="gsrc-pin">
+                <div class="gsrc-pin-bubble${estimating ? ' estimating' : ''}" style="--pin:${r.color};">
+                    <i class="pin-dot"></i>${r.name}<b class="pin-km">${r.estKm > 0 ? r.estKm.toFixed(1) + 'k' : '대기'}</b>
+                </div>
+                <div class="gsrc-pin-tail" style="--pin:${r.color};"></div>
+            </div>`;
+        }
+
+        // 펼칠 때마다 새로 그린다. km가 1초마다 바뀌어서 미리 만들어두면 금방 옛날 값이 된다
+        function fillClusterPanel(g) {
+            const el = g.marker.getElement();
+            if (!el) return;
+            const panel = el.querySelector('.cl-panel');
+            panel.innerHTML = [...g.members]
+                .sort((a, b) => b.estKm - a.estKm)
+                .map((r, i) => {
+                    const est = r.estKm > r.km + 1e-9;
+                    return `<button class="cl-chip${est ? ' estimating' : ''}" data-bib="${r.bib}"
+                                    style="--pin:${r.color}; --i:${i};">
+                        <i></i><span>${r.name}</span>
+                        <b>${r.estKm > 0 ? r.estKm.toFixed(1) + 'k' : '대기'}</b>
+                    </button>`;
+                }).join('');
+            panel.scrollTop = 0;   // 선두가 맨 위
+
+            // 위아래 여백을 재서 넓은 쪽으로 펼치고, 높이도 거기 맞춘다.
+            // 한쪽만 보고 뒤집으면 반대쪽에서 잘린다. 배지 기준으로 재야 한다
+            // (열린 패널까지 포함된 래퍼를 재면 값이 틀어진다)
+            const mapBox = map.getContainer().getBoundingClientRect();
+            const badge = el.querySelector('.gsrc-cluster').getBoundingClientRect();
+            const GAP = 14;
+            const above = badge.top - mapBox.top - GAP;
+            const below = mapBox.bottom - badge.bottom - GAP;
+            const flip = below > above;
+
+            el.querySelector('.gsrc-pin').classList.toggle('flip', flip);
+            panel.style.maxHeight = Math.max(92, Math.min(232, flip ? below : above)) + 'px';
+        }
+
+        function toggleCluster(g, open) {
+            const el = g.marker.getElement();
+            if (!el) return;
+            const pin = el.querySelector('.gsrc-pin');
+            if (open) {
+                fillClusterPanel(g);
+                pin.classList.add('is-open');
+                el.style.zIndex = 10000;   // 펼친 패널이 다른 마커에 가리지 않게
+            } else {
+                pin.classList.remove('is-open');
+                el.style.zIndex = '';
+            }
+        }
+
+        function renderMarkers(list) {
+            markerGroups.forEach(g => map.removeLayer(g.marker));
+            markerGroups = [];
+
+            // 따라가는 중인 사람은 묶지 않는다. 보려고 고른 사람이 덩어리에 숨으면 안 된다
+            const tracked = list.filter(r => r.bib === trackingBib);
+            const groups = clusterByScreen(list.filter(r => r.bib !== trackingBib))
+                .concat(tracked.map(r => ({ members: [r] })));
+
+            groups.forEach(g => {
+                const latlng = groupLatLng(g);
+                const alone = g.members.length === 1;
+                g.marker = L.marker(latlng, {
+                    icon: L.divIcon({
+                        className: '',
+                        html: alone ? pinHtml(g.members[0]) : clusterHtml(g.members)
+                    }),
+                    zIndexOffset: alone ? 0 : 500
+                }).addTo(map);
+
+                if (alone) {
+                    g.marker.on('click', () => setTracking(g.members[0].bib));
+                } else {
+                    const el = g.marker.getElement();
+                    L.DomEvent.disableClickPropagation(el);
+
+                    // 데스크탑은 CSS :hover가 펼쳐주지만, 패널 내용은 여기서 채워야 최신이다
+                    el.addEventListener('mouseenter', () => fillClusterPanel(g));
+                    el.addEventListener('mouseleave', () => toggleCluster(g, false));
+
+                    // 터치에는 호버가 없다. 탭으로 같은 동작을 연다
+                    el.querySelector('.gsrc-cluster').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const pin = el.querySelector('.gsrc-pin');
+                        toggleCluster(g, !pin.classList.contains('is-open'));
+                    });
+
+                    // 칩을 누르면 그 사람을 따라간다
+                    el.querySelector('.cl-panel').addEventListener('click', (e) => {
+                        const chip = e.target.closest('.cl-chip');
+                        if (!chip) return;
+                        e.stopPropagation();
+                        const r = globalRunnersData.find(x => x.bib === chip.dataset.bib);
+                        setTracking(chip.dataset.bib);
+                        if (r) map.flyTo([r.lat, r.lon], 16, { duration: 0.6 });
+                    });
+                }
+
+                markerGroups.push(g);
+            });
+        }
+
+        // ── 아래 리스트 ───────────────────────────────────────────
+        function renderList(list) {
             const listEl = document.getElementById('runner-list');
             listEl.innerHTML = '';
 
-            if (!globalRunnersData.length) return;
-
-            const filtered = globalRunnersData.filter(r => r.name.toLowerCase().includes(query) || r.bib.includes(query));
-            document.getElementById('runner-count-label').innerText = `총 ${filtered.length}명 출전`;
-
-            Object.values(runnerMarkers).forEach(m => map.removeLayer(m));
-            runnerMarkers = {};
-
-            filtered.forEach((r) => {
-                const icon = L.divIcon({
-                    className: '',
-                    html: `
-                        <div class="gsrc-pin">
-                            <div class="gsrc-pin-bubble" style="border-color:${r.color};">
-                                <span style="width:6px;height:6px;border-radius:50%;background:${r.color};"></span>
-                                ${r.name} <span style="color:var(--accent);">${r.km > 0 ? r.km.toFixed(1)+'k' : '대기'}</span>
-                            </div>
-                            <div class="gsrc-pin-tail" style="border-top-color:${r.color};"></div>
-                        </div>
-                    `
-                });
-                runnerMarkers[r.bib] = L.marker([r.lat, r.lon], { icon }).addTo(map);
-
-                const isTracking = trackingBib === r.bib;
+            list.forEach(r => {
+                const st = r.status;
+                const tracking = trackingBib === r.bib;
                 const card = document.createElement('div');
-                card.className = 'runner-card';
-                card.style.borderLeft = `5px solid ${r.color}`;
+                card.className = 'runner-card' + (tracking ? ' is-tracking' : '');
+                card.dataset.bib = r.bib;
                 card.innerHTML = `
+                    <span class="rc-dot" style="background:${r.color};"></span>
                     <div class="rc-profile">
-                        <div class="rc-dot" style="background:${r.color};"></div>
-                        <div>
-                            <div class="rc-name">${r.name}</div>
-                            <div class="rc-bib">#${r.bib}</div>
-                        </div>
+                        <span class="rc-name">${r.name}</span>
+                        <span class="rc-bib">${r.bib}</span>
                     </div>
                     <div class="rc-right">
-                        <span class="rc-status">${r.status}</span>
-                        <button class="track-btn ${isTracking ? 'active' : ''}" onclick="event.stopPropagation(); setTracking('${r.bib}')">
-                            ${isTracking ? '🔒 고정중' : '👤 트래킹'}
+                        <span class="rc-km">${r.estKm > 0 ? r.estKm.toFixed(1) : '-'}<small>km</small></span>
+                        <span class="rc-status ${st.tone}">${st.label}</span>
+                        <button class="track-btn ${tracking ? 'active' : ''}"
+                                onclick="event.stopPropagation(); setTracking('${r.bib}')">
+                            ${tracking ? '해제' : '따라가기'}
                         </button>
-                    </div>
-                `;
+                    </div>`;
                 card.onclick = () => {
                     setTracking(r.bib);
                     map.flyTo([r.lat, r.lon], 16, { duration: 0.6 });
                 };
                 listEl.appendChild(card);
             });
+        }
 
-            if (trackingBib && runnerMarkers[trackingBib]) {
-                const tr = globalRunnersData.find(x => x.bib === trackingBib);
+        function filterAndRenderUI() {
+            const query = document.getElementById('search-input').value.trim().toLowerCase();
+            if (!globalRunnersData.length) return;
+
+            visibleRunners = globalRunnersData.filter(r =>
+                r.name.toLowerCase().includes(query) || r.bib.includes(query));
+            document.getElementById('runner-count-label').innerText = `${visibleRunners.length}명`;
+
+            renderMarkers(visibleRunners);
+            renderList(visibleRunners);
+
+            if (trackingBib) {
+                const tr = visibleRunners.find(x => x.bib === trackingBib);
                 if (tr) map.panTo([tr.lat, tr.lon]);
             }
         }
+
+        // 줌이 바뀌면 화면상 거리가 달라지므로 덩어리를 다시 묶는다
+        map.on('zoomend', () => { if (visibleRunners.length) renderMarkers(visibleRunners); });
+
+        // 지도 빈 곳을 누르면 펼쳐둔 패널을 접는다 (호버가 없는 터치에서 필요)
+        map.on('click', () => markerGroups.forEach(g => toggleCluster(g, false)));
+
 
         function setTracking(bib) {
             trackingBib = bib;
@@ -436,6 +761,129 @@
         buildCourse();
         fetchRunnersData();
         setInterval(fetchRunnersData, 30000); // 30초마다 갱신된 data.json 동기화
+
+        // 마커 위치만 바꾼다. filterAndRenderUI는 DOM을 통째로 다시 만들어 63배 비싸고,
+        // 검색어 포커스와 리스트 스크롤 위치까지 날아간다.
+        // 마커 위치만 바꾼다. 전체를 다시 그리면 63배 비싸고, 검색어 포커스와
+        // 리스트 스크롤 위치까지 날아간다.
+        function tickEstimates() {
+            if (document.hidden || !globalRunnersData.length) return;
+
+            let moved = false;
+            globalRunnersData.forEach(r => {
+                const est = estimateKm(r);
+                if (Math.abs(est - r.estKm) < 1e-6) return;   // 안 움직였으면 건너뛴다
+                r.estKm = est;
+                r.status = statusText(r, est);
+                const pt = getCoordAtKm(est);
+                r.lat = pt.lat;
+                r.lon = pt.lon;
+                moved = true;
+
+                const card = document.querySelector(`#runner-list .runner-card[data-bib="${r.bib}"]`);
+                if (card) {
+                    card.querySelector('.rc-km').innerHTML =
+                        `${est > 0 ? est.toFixed(1) : '-'}<small>km</small>`;
+                    const stEl = card.querySelector('.rc-status');
+                    stEl.className = `rc-status ${r.status.tone}`;
+                    stEl.textContent = r.status.label;
+                }
+            });
+            if (!moved) return;
+
+            markerGroups.forEach(g => {
+                g.marker.setLatLng(groupLatLng(g));
+
+                if (g.members.length !== 1) {
+                    // 펼쳐져 있으면 숫자만 갈아끼운다. innerHTML을 다시 쓰면 애니메이션이 매초 재생된다
+                    const open = g.marker.getElement()?.querySelector('.gsrc-pin.is-open');
+                    if (open) open.querySelectorAll('.cl-chip').forEach(chip => {
+                        const r = g.members.find(x => x.bib === chip.dataset.bib);
+                        if (!r) return;
+                        chip.querySelector('b').textContent = r.estKm > 0 ? r.estKm.toFixed(1) + 'k' : '대기';
+                        chip.classList.toggle('estimating', r.estKm > r.km + 1e-9);
+                    });
+                    return;
+                }
+                const r = g.members[0];
+                const el = g.marker.getElement();
+                if (!el) return;
+                const kmEl = el.querySelector('.pin-km');
+                if (kmEl) kmEl.textContent = r.estKm > 0 ? r.estKm.toFixed(1) + 'k' : '대기';
+                const bubble = el.querySelector('.gsrc-pin-bubble');
+                if (bubble) bubble.classList.toggle('estimating', r.estKm > r.km + 1e-9);
+            });
+
+            if (trackingBib) {
+                const tr = globalRunnersData.find(x => x.bib === trackingBib);
+                if (tr) map.panTo([tr.lat, tr.lon], { animate: false });
+            }
+        }
+
+        // 줌 16에서도 러너는 1초에 1.5픽셀 간다. 1초면 충분하고 rAF는 과하다.
+
+        setInterval(tickEstimates, 1000);
+
+        // 레이아웃이 가로/세로로 갈아타면 지도 컨테이너 크기가 바뀐다. Leaflet에 알려줘야 한다
+        window.addEventListener('resize', () => map.invalidateSize());
+
+        // 바텀시트 높이 드래그 조절 (포인터 이벤트라 마우스/터치 한 벌로 처리)
+        (function initSheetResize() {
+            const sheet = document.getElementById('bottom-sheet');
+            const bar = document.getElementById('sheet-handle-bar');
+            const mapWrap = document.getElementById('map-container');
+
+            const MAP_MIN = 250;   // #map-container의 min-height와 같은 값
+            const SHEET_MIN = 108; // 핸들 + 검색창까지는 항상 보이게
+
+            let rafId = 0;
+            function syncMap() {
+                if (rafId) return;
+                rafId = requestAnimationFrame(() => {
+                    rafId = 0;
+                    if (typeof map !== 'undefined' && map) map.invalidateSize({ pan: false });
+                });
+            }
+
+            function applyHeight(px) {
+                // 지도와 시트가 나눠 쓰는 전체 높이에서 지도 최소치를 뺀 만큼이 시트 최대치
+                const available = mapWrap.offsetHeight + sheet.offsetHeight;
+                const max = Math.max(SHEET_MIN, available - MAP_MIN);
+                sheet.style.height = Math.min(max, Math.max(SHEET_MIN, px)) + 'px';
+                syncMap();
+            }
+
+            let startY = 0, startH = 0;
+
+            bar.addEventListener('pointerdown', (e) => {
+                startY = e.clientY;
+                startH = sheet.offsetHeight;
+                bar.setPointerCapture(e.pointerId);
+                sheet.classList.add('resizing');
+                e.preventDefault();
+            });
+
+            bar.addEventListener('pointermove', (e) => {
+                if (!bar.hasPointerCapture(e.pointerId)) return;
+                applyHeight(startH + (startY - e.clientY)); // 위로 끌면 커진다
+            });
+
+            function endDrag(e) {
+                if (bar.hasPointerCapture(e.pointerId)) bar.releasePointerCapture(e.pointerId);
+                sheet.classList.remove('resizing');
+            }
+            bar.addEventListener('pointerup', endDrag);
+            bar.addEventListener('pointercancel', endDrag);
+
+            // 창 크기가 바뀌면 지금 높이를 범위 안으로 되돌린다
+            window.addEventListener('resize', () => {
+                if (!sheet.style.height) return;
+                // 탭이 숨겨졌거나 레이아웃이 아직 안 잡힌 순간엔 측정값이 0에 가깝게 나온다.
+                // 그걸로 클램프하면 찌그러진 높이가 인라인 스타일로 굳어버린다
+                if (!mapWrap.offsetHeight || !sheet.offsetHeight) return;
+                applyHeight(sheet.offsetHeight);
+            });
+        })();
     </script>
 </body>
 </html>
