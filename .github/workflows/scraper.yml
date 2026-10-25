@@ -2,33 +2,35 @@ name: Marathon Auto Scraper
 
 on:
   schedule:
-    - cron: '* * * * *' # 매분 자동 실행
-  workflow_dispatch: # 수동 실행 버튼
+    # GitHub 스케줄은 최소 5분이고 혼잡하면 더 밀린다. 1분으로 적어도 그대로 돌지 않는다
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 permissions:
-  contents: write # 봇이 data.json을 수정하고 저장할 수 있는 권한 강제 부여
+  contents: write
+
+concurrency:
+  # 실행이 겹치면 push 가 충돌한다
+  group: scraper
+  cancel-in-progress: false
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+      # ubuntu-latest 에 Node 가 이미 깔려 있고 fetch 도 내장이라 설치 단계가 없다
+      - name: Run scraper
+        run: node scraper.js
 
-      - name: Install dependencies
-        run: pip install requests beautifulsoup4
-
-      - name: Run Scraper Script
-        run: python scraper.py
-
-      - name: Commit and push if changed
+      - name: Commit if changed
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update runner data" && git push)
+          git diff --staged --quiet || {
+            git commit -m "Auto-update runner data"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+            git push
+          }
